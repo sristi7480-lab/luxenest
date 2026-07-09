@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FaHeart, FaRegHeart, FaStar } from "react-icons/fa";
+import { supabase } from "../lib/supabaseClient";
 
 export interface Product {
   id: string;
@@ -17,6 +18,67 @@ export interface Product {
 
 export default function ProductCard({ product }: { product: Product }) {
   const [wishlisted, setWishlisted] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      setWishlisted(false);
+      return;
+    }
+
+    const checkWishlist = async () => {
+      const { data } = await supabase
+        .from("wishlists")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("product_id", product.id)
+        .maybeSingle();
+
+      setWishlisted(!!data);
+    };
+
+    checkWishlist();
+  }, [userId, product.id]);
+
+  const toggleWishlist = async () => {
+    if (!userId) {
+      alert("Please sign in to save items to your wishlist.");
+      return;
+    }
+
+    setLoading(true);
+
+    if (wishlisted) {
+      const { error } = await supabase
+        .from("wishlists")
+        .delete()
+        .eq("user_id", userId)
+        .eq("product_id", product.id);
+
+      if (!error) setWishlisted(false);
+    } else {
+      const { error } = await supabase
+        .from("wishlists")
+        .insert({ user_id: userId, product_id: product.id });
+
+      if (!error) setWishlisted(true);
+    }
+
+    setLoading(false);
+  };
 
   return (
     <motion.div
@@ -44,8 +106,9 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
         <button
           aria-label="Toggle wishlist"
-          onClick={() => setWishlisted((w) => !w)}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow hover:scale-110 transition-transform"
+          onClick={toggleWishlist}
+          disabled={loading}
+          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow hover:scale-110 transition-transform disabled:opacity-50"
         >
           {wishlisted ? (
             <FaHeart className="text-primary" size={15} />
@@ -75,7 +138,7 @@ export default function ProductCard({ product }: { product: Product }) {
           Quick View
         </button>
         <a
-          href={product.affiliateUrl}
+         href={product.affiliateUrl}
           target="_blank"
           rel="nofollow sponsored noopener"
           className="btn-primary text-center w-full mt-2 text-sm"

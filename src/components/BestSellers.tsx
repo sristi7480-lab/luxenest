@@ -4,7 +4,7 @@ import { staggerContainer, fadeUp, viewportOnce } from "../lib/motionVariants";
 
 // All product links below use real Amazon affiliate short-links (amzn.to),
 // generated via Amazon SiteStripe with your tag (srishticurati-21) included.
-const PRODUCTS: Product[] = [
+export const PRODUCTS: Product[] = [
   {
     id: "1",
     name: "CASA-NEST Linen Embroidery Cushion Cover (16x16\", Pack of 2)",

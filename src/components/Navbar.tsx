@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FaSearch, FaRegHeart, FaShoppingBag, FaBars, FaTimes } from "react-icons/fa";
+import { FaSearch, FaRegHeart, FaShoppingBag, FaBars, FaTimes, FaGoogle } from "react-icons/fa";
+import { supabase } from "../lib/supabaseClient";
+import type { User } from "@supabase/supabase-js";
 
 const LINKS = [
   { label: "Home", to: "/" },
@@ -17,12 +19,39 @@ const LINKS = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    // Check current session on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for login/logout changes
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+    if (error) console.error("Error logging in:", error.message);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Error logging out:", error.message);
+  };
 
   return (
     <header
@@ -52,8 +81,36 @@ export default function Navbar() {
 
         <div className="hidden lg:flex items-center gap-5 text-foreground">
           <FaSearch className="cursor-pointer hover:scale-110 transition-transform" />
-          <FaRegHeart className="cursor-pointer hover:scale-110 transition-transform" />
+          <Link to="/wishlist">
+  <FaRegHeart className="cursor-pointer hover:scale-110 transition-transform" />
+</Link> 
           <FaShoppingBag className="cursor-pointer hover:scale-110 transition-transform" />
+
+          {user ? (
+            <div className="flex items-center gap-3">
+              {user.user_metadata?.avatar_url && (
+                <img
+                  src={user.user_metadata.avatar_url}
+                  alt={user.user_metadata?.full_name ?? "User"}
+                  className="w-8 h-8 rounded-full border border-border"
+                />
+              )}
+              <button
+                onClick={handleLogout}
+                className="text-sm hover:text-primary transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleGoogleLogin}
+              className="flex items-center gap-2 text-sm border border-border rounded-full px-4 py-1.5 hover:border-primary hover:text-primary transition-colors"
+            >
+              <FaGoogle />
+              Sign in
+            </button>
+          )}
         </div>
 
         <button
@@ -74,6 +131,17 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
+          <li>
+            {user ? (
+              <button onClick={handleLogout} className="text-left">
+                Log out
+              </button>
+            ) : (
+              <button onClick={handleGoogleLogin} className="text-left flex items-center gap-2">
+                <FaGoogle /> Sign in with Google
+              </button>
+            )}
+          </li>
         </ul>
       )}
     </header>
