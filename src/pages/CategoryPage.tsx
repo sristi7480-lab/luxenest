@@ -1,12 +1,53 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import ProductCard from "../components/ProductCard";
+import ProductCard, { type Product } from "../components/ProductCard";
 import { getCategoryBySlug } from "../data/categories";
 import { fadeUp } from "../lib/motionVariants";
+import { supabase } from "../lib/supabaseClient";
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
   const category = slug ? getCategoryBySlug(slug) : undefined;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!slug) return;
+
+    const fetchProducts = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", slug)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching category products:", error.message);
+        setLoading(false);
+        return;
+      }
+
+      const mapped: Product[] = data.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        image: p.image,
+        price: p.price,
+        originalPrice: p.original_price ?? undefined,
+        rating: p.rating,
+        sale: p.sale,
+        editorsChoice: p.editors_choice,
+        affiliateUrl: p.affiliate_url,
+      }));
+
+      setProducts(mapped);
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, [slug]);
 
   if (!category) {
     return (
@@ -50,7 +91,9 @@ export default function CategoryPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-6 py-16">
-        {category.products.length === 0 ? (
+        {loading ? (
+          <p className="text-center py-20 text-foreground/60">Loading products...</p>
+        ) : products.length === 0 ? (
           <p className="text-foreground/60 text-center py-20">
             We're curating products for this collection — check back soon, or
             browse our{" "}
@@ -64,7 +107,7 @@ export default function CategoryPage() {
             className="grid gap-6"
             style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
           >
-            {category.products.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

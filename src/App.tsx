@@ -9,6 +9,7 @@ import ContactPage from "./pages/ContactPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 import WishlistPage from "./pages/WishlistPage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   useLenis();
@@ -25,6 +26,7 @@ function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
       <Footer />
@@ -32,4 +34,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;
