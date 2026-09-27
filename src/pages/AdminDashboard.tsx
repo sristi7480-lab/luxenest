@@ -247,6 +247,7 @@ export default function AdminDashboard() {
               name="rating"
               min={1}
               max={5}
+              step={0.1}
               value={form.rating}
               onChange={handleChange}
               className="border border-border rounded-lg px-3 py-1 w-20"
